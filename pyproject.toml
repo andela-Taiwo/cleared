@@ -5,10 +5,16 @@ description = "Credential compliance for home care and medical staffing agencies
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-dependencies = []
+dependencies = [
+  "fastapi==0.163.1",
+  "pydantic==2.14.3",
+  "pydantic-settings==2.16.3",
+  "uvicorn[standard]==0.54.0",
+]
 
 [dependency-groups]
 dev = [
+  "httpx==0.28.1",
   "pytest==9.2.0",
   "pytest-asyncio==1.5.0",
   "ruff==0.17.5",
@@ -42,5 +48,6 @@ reportMissingTypeStubs = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 filterwarnings = ["error"]
