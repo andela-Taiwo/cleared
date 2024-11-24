@@ -35,9 +35,10 @@ jobs:
           --health-retries 20
     env:
       CLEARED_ENVIRONMENT: test
-      CLEARED_DATABASE_URL: postgresql+asyncpg://cleared_owner:cleared_owner@127.0.0.1:5432/cleared_test
+      CLEARED_DATABASE_URL: postgresql+asyncpg://cleared_app:cleared_app@127.0.0.1:5432/cleared_test
       CLEARED_MIGRATION_DATABASE_URL: postgresql+asyncpg://cleared_owner:cleared_owner@127.0.0.1:5432/cleared_test
-      CLEARED_TEST_DATABASE_URL: postgresql+asyncpg://cleared_owner:cleared_owner@127.0.0.1:5432/cleared_test
+      CLEARED_TEST_APP_DATABASE_URL: postgresql+asyncpg://cleared_app:cleared_app@127.0.0.1:5432/cleared_test
+      CLEARED_TEST_OWNER_DATABASE_URL: postgresql+asyncpg://cleared_owner:cleared_owner@127.0.0.1:5432/cleared_test
       CLEARED_SECRET_KEY: ci-only-secret-ci-only-secret-ci-only-secret
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +50,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version-file: .python-version
+      - name: Create the non-owner role the tests connect as
+        run: |
+          PGPASSWORD=cleared_owner psql -h 127.0.0.1 -U cleared_owner -d cleared_test -v ON_ERROR_STOP=1 <<'SQL'
+          create role cleared_app login password 'cleared_app' nobypassrls;
+          grant connect on database cleared_test to cleared_app;
+          SQL
       - name: Install
         run: uv sync --locked
       - name: Lint
