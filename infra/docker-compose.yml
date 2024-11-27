@@ -1,0 +1,24 @@
+name: cleared
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cleared_owner
+      POSTGRES_PASSWORD: cleared_owner
+      POSTGRES_DB: cleared_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
+    # Checked over TCP. During first-start initialisation the server listens on the unix
+    # socket only, so a socket check reports healthy before the init scripts have run.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U cleared_owner -d cleared_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  pgdata:
