@@ -105,9 +105,14 @@ async def test_app_role_cannot_update_another_tenant(
     assert result.rowcount == 0  # type: ignore[attr-defined]
 
 
+# Global tables are reviewed, not accidental. Anything else must be tenant-isolated.
+GLOBAL_TABLES = {"alembic_version", "sessions"}
+
+TENANT_TABLES = {"organizations", "users"}
+
+
 async def test_every_tenant_table_has_the_standard_policy(owner_session: AsyncSession) -> None:
-    """A new table without a policy is a leak, so the set is asserted explicitly."""
-    expected = {"organizations", "users"}
+    """A new table without a policy is a leak, so both sets are asserted explicitly."""
 
     async with owner_session.begin():
         rows = await owner_session.execute(
@@ -123,6 +128,18 @@ async def test_every_tenant_table_has_the_standard_policy(owner_session: AsyncSe
         )
         policies = {row.table_name: row.policy_name for row in rows}
 
+        everything = await owner_session.execute(
+            text(
+                """
+                select c.relname
+                from pg_class c
+                join pg_namespace n on n.oid = c.relnamespace
+                where n.nspname = 'public' and c.relkind = 'r'
+                """
+            )
+        )
+        all_tables = set(everything.scalars().all())
+
         protected = await owner_session.execute(
             text(
                 """
@@ -135,7 +152,9 @@ async def test_every_tenant_table_has_the_standard_policy(owner_session: AsyncSe
         )
         protected_tables = set(protected.scalars().all())
 
-    assert protected_tables == expected
-    assert {table: policies[table] for table in expected} == dict.fromkeys(
-        expected, "tenant_isolation"
+    assert protected_tables == TENANT_TABLES
+    assert {table: policies[table] for table in TENANT_TABLES} == dict.fromkeys(
+        TENANT_TABLES, "tenant_isolation"
     )
+    # Every table is either isolated or on the reviewed list. No silent third option.
+    assert all_tables - protected_tables == GLOBAL_TABLES
