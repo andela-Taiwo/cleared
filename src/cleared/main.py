@@ -7,8 +7,11 @@ everything. That keeps tests able to construct an app with different settings.
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from cleared import __version__
+from cleared.api.errors import register_error_handlers
+from cleared.api.routes.auth import router as auth_router
 from cleared.config import get_settings
 
 
@@ -22,6 +25,17 @@ def create_app() -> FastAPI:
         docs_url=None if settings.is_prod else "/docs",
         openapi_url=None if settings.is_prod else "/openapi.json",
     )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[settings.web_origin],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type"],
+    )
+
+    register_error_handlers(app)
+    app.include_router(auth_router, prefix="/v1")
 
     @app.get("/healthz", tags=["meta"])
     async def healthz() -> dict[str, str]:
