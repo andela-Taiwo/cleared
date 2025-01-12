@@ -65,3 +65,31 @@ async def create_agency(
     return Agency(
         organization_id=organization_id, user_id=user_id, email=address, password=PASSWORD
     )
+
+
+async def add_user(
+    session: AsyncSession, agency: Agency, *, role: str, email: str | None = None
+) -> Agency:
+    """A second user in the same organisation, with a different role."""
+    user_id = uuid7()
+    address = email or f"{role}2@{agency.email.split('@')[1]}"
+
+    async with session.begin():
+        await set_tenant(session, agency.organization_id)
+        session.add(
+            User(
+                id=user_id,
+                organization_id=agency.organization_id,
+                email=address,
+                name=f"{role.title()} Two",
+                role=role,
+                password_hash=hash_password(PASSWORD),
+            )
+        )
+
+    return Agency(
+        organization_id=agency.organization_id,
+        user_id=user_id,
+        email=address,
+        password=PASSWORD,
+    )

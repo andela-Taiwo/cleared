@@ -4,18 +4,12 @@ from datetime import UTC, datetime, timedelta
 
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
+from tests.support.api import sign_in
 from tests.support.seed import Agency
 from uuid6 import uuid7
 
 from cleared.domain.models import AuthSession
 from cleared.security.sessions import hash_token
-
-
-async def sign_in(client: AsyncClient, agency: Agency) -> None:
-    response = await client.post(
-        "/v1/auth/login", json={"email": agency.email, "password": agency.password}
-    )
-    assert response.status_code == 200, response.text
 
 
 async def test_login_sets_an_http_only_cookie(client: AsyncClient, agency: Agency) -> None:

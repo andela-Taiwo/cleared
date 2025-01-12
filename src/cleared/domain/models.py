@@ -8,10 +8,11 @@ the value is generated in the application.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     String,
@@ -19,12 +20,12 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from uuid6 import uuid7
 
 from cleared.db.base import Base, CreatedAtMixin, TimestampsMixin
 
-__all__ = ["AuthSession", "Organization", "User"]
+__all__ = ["AuthSession", "Employee", "JobRole", "Organization", "User"]
 
 
 class Organization(TimestampsMixin, Base):
@@ -85,3 +86,43 @@ class AuthSession(CreatedAtMixin, Base):
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     user_agent: Mapped[str | None] = mapped_column(String(400))
     ip: Mapped[str | None] = mapped_column(String(64))
+
+
+class JobRole(TimestampsMixin, Base):
+    """A kind of worker the agency deploys: CNA, HHA, RN, LPN, PT…"""
+
+    __tablename__ = "job_roles"
+    __table_args__ = (UniqueConstraint("organization_id", "code"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    code: Mapped[str] = mapped_column(String(20), nullable=False)
+
+
+class Employee(TimestampsMixin, Base):
+    __tablename__ = "employees"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "employee_no"),
+        CheckConstraint("status in ('active', 'inactive', 'onboarding')", name="status_allowed"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
+    employee_no: Mapped[str | None] = mapped_column(String(40))
+    first_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(320))
+    phone: Mapped[str | None] = mapped_column(String(40))
+    job_role_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("job_roles.id", ondelete="RESTRICT"), index=True
+    )
+    location: Mapped[str | None] = mapped_column(String(120))
+    hired_on: Mapped[date | None] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, server_default=text("'active'"))
+
+    job_role: Mapped[JobRole | None] = relationship(lazy="joined")

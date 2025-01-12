@@ -77,3 +77,20 @@ async def get_principal(
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 PrincipalDep = Annotated[Principal, Depends(get_principal)]
+
+
+async def require_editor(principal: PrincipalDep) -> Principal:
+    """Admins and coordinators may change the roster; viewers may only read it."""
+    if principal.role not in ("admin", "coordinator"):
+        raise Problem(403, "Your role cannot change the roster")
+    return principal
+
+
+async def require_admin(principal: PrincipalDep) -> Principal:
+    if not principal.is_admin:
+        raise Problem(403, "Only an administrator can do that")
+    return principal
+
+
+EditorDep = Annotated[Principal, Depends(require_editor)]
+AdminDep = Annotated[Principal, Depends(require_admin)]
