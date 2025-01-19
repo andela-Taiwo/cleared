@@ -5,15 +5,24 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, UploadFile
 from sqlalchemy.exc import IntegrityError
 
 from cleared.api.deps import EditorDep, PrincipalDep, SessionDep
 from cleared.api.errors import Problem
 from cleared.db.tenant import tenant_scope
 from cleared.domain.models import Employee
-from cleared.schemas.employees import EmployeeCreate, EmployeeOut, EmployeePage, EmployeeUpdate
+from cleared.domain.roster_csv import parse_roster
+from cleared.schemas.employees import (
+    EmployeeCreate,
+    EmployeeOut,
+    EmployeePage,
+    EmployeeUpdate,
+    ImportReport,
+    ImportRowError,
+)
 from cleared.services import employees as employees_service
+from cleared.services import imports as imports_service
 from cleared.services.employees import EmployeeFilters
 
 router = APIRouter(prefix="/employees", tags=["employees"])
@@ -69,6 +78,33 @@ async def create_employee(
             raise Problem(409, "That employee number is already in use") from None
         employee = await _reload(session, employee.id)
         return EmployeeOut.model_validate(employee)
+
+
+@router.post("/import", summary="Import a roster from CSV")
+async def import_employees(
+    file: UploadFile, principal: EditorDep, session: SessionDep
+) -> ImportReport:
+    raw = await file.read()
+    if len(raw) > 2_000_000:
+        raise Problem(413, "The file is larger than 2 MB")
+
+    text = raw.decode("utf-8-sig", errors="replace")
+    rows, problems = parse_roster(text)
+    if not rows and not problems:
+        raise Problem(422, "The file has no rows")
+
+    async with tenant_scope(session, principal.organization_id):
+        report = await imports_service.import_roster(session, principal.organization_id, rows)
+
+    return ImportReport(
+        created=report.created,
+        updated=report.updated,
+        failed=report.failed + len(problems),
+        errors=[
+            ImportRowError(line=problem.line, message=problem.message)
+            for problem in [*problems, *report.errors]
+        ],
+    )
 
 
 @router.get("/{employee_id}", summary="One employee")

@@ -67,3 +67,15 @@ class EmployeePage(BaseModel):
     items: list[EmployeeOut]
     next_cursor: str | None
     total: int
+
+
+class ImportRowError(BaseModel):
+    line: int
+    message: str
+
+
+class ImportReport(BaseModel):
+    created: int
+    updated: int
+    failed: int
+    errors: list[ImportRowError]
