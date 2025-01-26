@@ -2,7 +2,10 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { useLogout, useMe } from "@/auth/auth";
 
-const nav = [{ to: "/", label: "Overview", end: true }];
+const nav = [
+  { to: "/", label: "Overview", end: true },
+  { to: "/employees", label: "Roster", end: false },
+];
 
 function initials(name: string): string {
   return name
