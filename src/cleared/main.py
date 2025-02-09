@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from cleared import __version__
 from cleared.api.errors import register_error_handlers
 from cleared.api.routes.auth import router as auth_router
+from cleared.api.routes.credential_types import router as credential_types_router
 from cleared.api.routes.employees import router as employees_router
 from cleared.api.routes.job_roles import router as roles_router
 from cleared.config import get_settings
@@ -39,6 +40,7 @@ def create_app() -> FastAPI:
     register_error_handlers(app)
     app.include_router(auth_router, prefix="/v1")
     app.include_router(employees_router, prefix="/v1")
+    app.include_router(credential_types_router, prefix="/v1")
     app.include_router(roles_router, prefix="/v1")
 
     @app.get("/healthz", tags=["meta"])

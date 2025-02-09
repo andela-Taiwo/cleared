@@ -108,7 +108,13 @@ async def test_app_role_cannot_update_another_tenant(
 # Global tables are reviewed, not accidental. Anything else must be tenant-isolated.
 GLOBAL_TABLES = {"alembic_version", "sessions"}
 
-TENANT_TABLES = {"organizations", "users", "job_roles", "employees"}
+TENANT_TABLES = {
+    "organizations",
+    "users",
+    "job_roles",
+    "employees",
+    "credential_types",
+}
 
 
 async def test_every_tenant_table_has_the_standard_policy(owner_session: AsyncSession) -> None:

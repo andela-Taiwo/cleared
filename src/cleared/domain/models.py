@@ -11,10 +11,12 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
+    Integer,
     String,
     UniqueConstraint,
     text,
@@ -25,7 +27,14 @@ from uuid6 import uuid7
 
 from cleared.db.base import Base, CreatedAtMixin, TimestampsMixin
 
-__all__ = ["AuthSession", "Employee", "JobRole", "Organization", "User"]
+__all__ = [
+    "AuthSession",
+    "CredentialType",
+    "Employee",
+    "JobRole",
+    "Organization",
+    "User",
+]
 
 
 class Organization(TimestampsMixin, Base):
@@ -126,3 +135,29 @@ class Employee(TimestampsMixin, Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default=text("'active'"))
 
     job_role: Mapped[JobRole | None] = relationship(lazy="joined")
+
+
+class CredentialType(TimestampsMixin, Base):
+    """A kind of evidence: RN licence, CPR card, TB test, background check…"""
+
+    __tablename__ = "credential_types"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "code"),
+        CheckConstraint(
+            "category in ('license', 'certification', 'clearance', 'health', 'training')",
+            name="category_allowed",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    code: Mapped[str] = mapped_column(String(30), nullable=False)
+    category: Mapped[str] = mapped_column(String(20), nullable=False)
+    issuing_authority: Mapped[str | None] = mapped_column(String(160))
+    validity_months: Mapped[int | None] = mapped_column(Integer)
+    requires_document: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("true")
+    )
