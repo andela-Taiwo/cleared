@@ -18,6 +18,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
     text,
 )
@@ -31,6 +32,7 @@ __all__ = [
     "AuthSession",
     "CredentialType",
     "Employee",
+    "EmployeeCredential",
     "JobRole",
     "Organization",
     "User",
@@ -161,3 +163,36 @@ class CredentialType(TimestampsMixin, Base):
     requires_document: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("true")
     )
+
+
+class EmployeeCredential(TimestampsMixin, Base):
+    """One piece of evidence, held by one person, with its own expiry date."""
+
+    __tablename__ = "employee_credentials"
+    __table_args__ = (
+        CheckConstraint(
+            "expires_on is null or issued_on is null or expires_on >= issued_on",
+            name="dates_ordered",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
+    employee_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("employees.id", ondelete="CASCADE"), index=True
+    )
+    credential_type_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("credential_types.id", ondelete="RESTRICT"), index=True
+    )
+    identifier: Mapped[str | None] = mapped_column(String(80))
+    issued_on: Mapped[date | None] = mapped_column(Date)
+    expires_on: Mapped[date | None] = mapped_column(Date, index=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    verified_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    credential_type: Mapped[CredentialType] = relationship(lazy="joined")

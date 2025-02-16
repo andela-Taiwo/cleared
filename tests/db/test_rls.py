@@ -114,6 +114,7 @@ TENANT_TABLES = {
     "job_roles",
     "employees",
     "credential_types",
+    "employee_credentials",
 }
 
 

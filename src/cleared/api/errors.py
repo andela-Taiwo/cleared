@@ -91,7 +91,16 @@ async def validation_exception_handler(
         title="Request validation failed",
         detail="One or more fields are invalid.",
         type_="https://cleared.example/errors/validation",
-        extra={"errors": exc.errors()},
+        extra={
+            "errors": [
+                {
+                    "loc": list(error.get("loc", ())),
+                    "msg": str(error.get("msg", "")),
+                    "type": str(error.get("type", "")),
+                }
+                for error in exc.errors()
+            ]
+        },
     )
 
 
