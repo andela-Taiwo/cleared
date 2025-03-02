@@ -35,6 +35,7 @@ __all__ = [
     "EmployeeCredential",
     "JobRole",
     "Organization",
+    "RoleRequirement",
     "User",
 ]
 
@@ -196,3 +197,21 @@ class EmployeeCredential(TimestampsMixin, Base):
     notes: Mapped[str | None] = mapped_column(Text)
 
     credential_type: Mapped[CredentialType] = relationship(lazy="joined")
+
+
+class RoleRequirement(CreatedAtMixin, Base):
+    """A row exists exactly when the role requires the credential type."""
+
+    __tablename__ = "role_requirements"
+    __table_args__ = (UniqueConstraint("organization_id", "job_role_id", "credential_type_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
+    job_role_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("job_roles.id", ondelete="CASCADE"), index=True
+    )
+    credential_type_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("credential_types.id", ondelete="CASCADE")
+    )

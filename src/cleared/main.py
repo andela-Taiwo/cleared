@@ -16,6 +16,7 @@ from cleared.api.routes.credential_types import router as credential_types_route
 from cleared.api.routes.credentials import router as credentials_router
 from cleared.api.routes.employees import router as employees_router
 from cleared.api.routes.job_roles import router as roles_router
+from cleared.api.routes.requirements import router as requirements_router
 from cleared.config import get_settings
 
 
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     app.include_router(credential_types_router, prefix="/v1")
     app.include_router(credentials_router, prefix="/v1")
     app.include_router(roles_router, prefix="/v1")
+    app.include_router(requirements_router, prefix="/v1")
 
     @app.get("/healthz", tags=["meta"])
     async def healthz() -> dict[str, str]:
