@@ -6,6 +6,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from cleared.schemas.compliance import ComplianceSummary
+
 EmployeeStatus = Literal["active", "inactive", "onboarding"]
 
 
@@ -35,6 +37,7 @@ class EmployeeOut(BaseModel):
     hired_on: date | None
     status: EmployeeStatus
     job_role: JobRoleOut | None
+    compliance: ComplianceSummary | None = None
     created_at: datetime
     updated_at: datetime
 

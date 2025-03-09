@@ -13,6 +13,7 @@ from cleared.api.errors import Problem
 from cleared.db.tenant import tenant_scope
 from cleared.domain.models import Employee
 from cleared.domain.roster_csv import parse_roster
+from cleared.schemas.compliance import ComplianceSummary
 from cleared.schemas.employees import (
     EmployeeCreate,
     EmployeeOut,
@@ -21,11 +22,26 @@ from cleared.schemas.employees import (
     ImportReport,
     ImportRowError,
 )
+from cleared.services import compliance as compliance_service
 from cleared.services import employees as employees_service
 from cleared.services import imports as imports_service
 from cleared.services.employees import EmployeeFilters
 
 router = APIRouter(prefix="/employees", tags=["employees"])
+
+
+def _summary(compliance: object) -> ComplianceSummary:
+    from cleared.domain.compliance import CredentialState, EmployeeCompliance
+
+    assert isinstance(compliance, EmployeeCompliance)
+    return ComplianceSummary(
+        state=compliance.state,
+        readiness=compliance.readiness,
+        expired=compliance.count(CredentialState.expired),
+        expiring=compliance.count(CredentialState.expiring),
+        missing=compliance.count(CredentialState.missing),
+        unverified=compliance.count(CredentialState.unverified),
+    )
 
 
 async def _reload(session: SessionDep, employee_id: uuid.UUID) -> Employee:
@@ -55,11 +71,15 @@ async def list_employees(
         except ValueError:
             raise Problem(400, "Invalid cursor") from None
 
-    return EmployeePage(
-        items=[EmployeeOut.model_validate(employee) for employee in page],
-        next_cursor=next_cursor,
-        total=total,
-    )
+        rules = await compliance_service.load_rules(session)
+        items = [
+            EmployeeOut.model_validate(employee).model_copy(
+                update={"compliance": _summary(rules.for_employee(employee))}
+            )
+            for employee in page
+        ]
+
+    return EmployeePage(items=items, next_cursor=next_cursor, total=total)
 
 
 @router.post("", status_code=201, summary="Add someone to the roster")
