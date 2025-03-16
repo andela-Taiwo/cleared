@@ -4,6 +4,15 @@ import { api } from "@/api/client";
 
 export type JobRole = { id: string; name: string; code: string };
 
+export type ComplianceSummary = {
+  state: "compliant" | "at_risk" | "non_compliant";
+  readiness: number;
+  expired: number;
+  expiring: number;
+  missing: number;
+  unverified: number;
+};
+
 export type Employee = {
   id: string;
   employee_no: string | null;
@@ -15,6 +24,7 @@ export type Employee = {
   hired_on: string | null;
   status: "active" | "inactive" | "onboarding";
   job_role: JobRole | null;
+  compliance?: ComplianceSummary | null;
 };
 
 export type EmployeePage = {
@@ -93,5 +103,35 @@ export function useImportRoster() {
       return api.upload<ImportReport>("/v1/employees/import", form);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
+  });
+}
+
+export function useEmployee(employeeId: string | undefined) {
+  return useQuery({
+    queryKey: ["employee", employeeId],
+    queryFn: () => api.get<Employee>(`/v1/employees/${employeeId}`),
+    enabled: Boolean(employeeId),
+  });
+}
+
+export type RequirementStatus = {
+  credential_type_id: string;
+  credential_type_name: string;
+  state: "expired" | "unverified" | "expiring" | "valid" | "missing";
+  expires_on: string | null;
+  days_left: number | null;
+};
+
+export type EmployeeCompliance = {
+  state: "compliant" | "at_risk" | "non_compliant";
+  readiness: number;
+  items: RequirementStatus[];
+};
+
+export function useEmployeeCompliance(employeeId: string | undefined) {
+  return useQuery({
+    queryKey: ["employee-compliance", employeeId],
+    queryFn: () => api.get<EmployeeCompliance>(`/v1/compliance/employees/${employeeId}`),
+    enabled: Boolean(employeeId),
   });
 }
