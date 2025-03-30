@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import random
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -17,7 +17,15 @@ from uuid6 import uuid7
 
 from cleared.config import get_settings
 from cleared.db.tenant import set_tenant
-from cleared.domain.models import Employee, JobRole, Organization, User
+from cleared.domain.models import (
+    CredentialType,
+    Employee,
+    EmployeeCredential,
+    JobRole,
+    Organization,
+    RoleRequirement,
+    User,
+)
 from cleared.security.passwords import hash_password
 
 SLUG = "northwind"
@@ -109,6 +117,39 @@ LAST_NAMES = [
     "Meyer",
 ]
 
+CREDENTIAL_TYPES = [
+    ("Registered Nurse licence", "RN-LIC", "license", "Massachusetts Board of Nursing", 24),
+    ("Practical Nurse licence", "LPN-LIC", "license", "Massachusetts Board of Nursing", 24),
+    (
+        "Nursing Assistant certification",
+        "CNA-CERT",
+        "certification",
+        "Massachusetts Nurse Aide Registry",
+        24,
+    ),
+    (
+        "Home Health Aide certificate",
+        "HHA-CERT",
+        "certification",
+        "Massachusetts Home Care Aide Council",
+        24,
+    ),
+    ("Physical Therapist licence", "PT-LIC", "license", "Massachusetts Board of Allied Health", 24),
+    ("CPR / BLS", "CPR", "certification", "American Heart Association", 24),
+    ("TB test", "TB", "health", "Any licensed provider", 12),
+    ("Background check (CORI)", "CORI", "clearance", "Massachusetts DCJIS", 12),
+    ("Dementia care training", "DEMENTIA", "training", "Alzheimer's Association", 24),
+]
+
+# Which evidence each role requires, by credential code.
+ROLE_REQUIREMENTS = {
+    "RN": ["RN-LIC", "CPR", "TB", "CORI"],
+    "LPN": ["LPN-LIC", "CPR", "TB", "CORI"],
+    "CNA": ["CNA-CERT", "CPR", "TB", "CORI"],
+    "HHA": ["HHA-CERT", "CPR", "TB"],
+    "PT": ["PT-LIC", "CPR", "CORI"],
+}
+
 ROLES = [
     ("Certified Nursing Assistant", "CNA"),
     ("Home Health Aide", "HHA"),
@@ -166,6 +207,7 @@ async def _seed(session: AsyncSession) -> tuple[Organization, int]:
     rng = random.Random(42)
     existing_count = len((await session.scalars(select(Employee))).all())
     if existing_count:
+        await _seed_credentials(session, organization, roles)
         return organization, existing_count
 
     today = date.today()
@@ -194,6 +236,100 @@ async def _seed(session: AsyncSession) -> tuple[Organization, int]:
 
     await session.flush()
     return organization, 40
+
+
+async def _seed_credentials(
+    session: AsyncSession, organization: Organization, roles: list[JobRole]
+) -> None:
+    """Give each role its requirements, and each employee a realistic mix of evidence."""
+    types_by_code: dict[str, CredentialType] = {}
+    for name, code, category, authority, months in CREDENTIAL_TYPES:
+        credential_type = await session.scalar(
+            select(CredentialType).where(CredentialType.code == code)
+        )
+        if credential_type is None:
+            credential_type = CredentialType(
+                id=uuid7(),
+                organization_id=organization.id,
+                name=name,
+                code=code,
+                category=category,
+                issuing_authority=authority,
+                validity_months=months,
+                requires_document=True,
+            )
+            session.add(credential_type)
+            await session.flush()
+        types_by_code[code] = credential_type
+
+    roles_by_code = {role.code: role for role in roles}
+    for role_code, required in ROLE_REQUIREMENTS.items():
+        role = roles_by_code.get(role_code)
+        if role is None:
+            continue
+        existing = await session.scalar(
+            select(RoleRequirement).where(RoleRequirement.job_role_id == role.id).limit(1)
+        )
+        if existing is not None:
+            continue
+        for code in required:
+            session.add(
+                RoleRequirement(
+                    id=uuid7(),
+                    organization_id=organization.id,
+                    job_role_id=role.id,
+                    credential_type_id=types_by_code[code].id,
+                )
+            )
+    await session.flush()
+
+    existing_credentials = (await session.scalars(select(EmployeeCredential).limit(1))).first()
+    if existing_credentials is not None:
+        return
+
+    employees = (await session.scalars(select(Employee).order_by(Employee.employee_no))).all()
+    today = date.today()
+
+    for index, employee in enumerate(employees):
+        if employee.job_role is None:
+            continue
+        for code in ROLE_REQUIREMENTS.get(employee.job_role.code, []):
+            if index % 13 == 0:
+                continue  # nothing recorded at all
+
+            # Each credential gets its own date, so a person's file does not look like one
+            # bulk entry with the same day copied down the column.
+            spread = len(code) * 11 + index * 7
+
+            if index % 9 == 0:
+                expires_on = today - timedelta(days=3 + spread % 18)
+                verified = True
+            elif index % 7 == 0:
+                expires_on = today + timedelta(days=4 + spread % 34)
+                verified = True
+            elif index % 5 == 0:
+                expires_on = today + timedelta(days=90 + spread % 300)
+                verified = False
+            else:
+                expires_on = today + timedelta(days=70 + (index * 13 + spread) % 600)
+                verified = True
+
+            issued_on = expires_on - timedelta(days=365 if code != "TB" else 365)
+            session.add(
+                EmployeeCredential(
+                    id=uuid7(),
+                    organization_id=organization.id,
+                    employee_id=employee.id,
+                    credential_type_id=types_by_code[code].id,
+                    identifier=f"{code}-{1000 + index * 7 % 9000}",
+                    issued_on=issued_on,
+                    expires_on=expires_on,
+                    verified_at=datetime.now(UTC) if verified else None,
+                    notes=None,
+                )
+            )
+
+    await session.flush()
 
 
 async def main() -> None:
