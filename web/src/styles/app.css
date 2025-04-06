@@ -1123,3 +1123,35 @@ a:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Matrix ----------------------------------------------------------------- */
+.matrix th,
+.matrix td {
+  vertical-align: middle;
+}
+
+.matrix__role {
+  text-align: center !important;
+  min-width: 120px;
+}
+
+.matrix__corner {
+  min-width: 240px;
+}
+
+.matrix__cell {
+  text-align: center;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.notice--error {
+  background: var(--danger-bg);
+  border-color: #f0cbc7;
+  color: var(--danger-ink);
+}
