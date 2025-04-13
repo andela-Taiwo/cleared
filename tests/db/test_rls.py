@@ -116,6 +116,8 @@ TENANT_TABLES = {
     "credential_types",
     "employee_credentials",
     "role_requirements",
+    "reminder_rules",
+    "reminder_events",
 }
 
 

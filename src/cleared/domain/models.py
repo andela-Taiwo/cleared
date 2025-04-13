@@ -35,6 +35,8 @@ __all__ = [
     "EmployeeCredential",
     "JobRole",
     "Organization",
+    "ReminderEvent",
+    "ReminderRule",
     "RoleRequirement",
     "User",
 ]
@@ -215,3 +217,50 @@ class RoleRequirement(CreatedAtMixin, Base):
     credential_type_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("credential_types.id", ondelete="CASCADE")
     )
+
+
+class ReminderRule(TimestampsMixin, Base):
+    __tablename__ = "reminder_rules"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "days_before", "audience"),
+        CheckConstraint("days_before >= 0 and days_before <= 365", name="days_in_range"),
+        CheckConstraint("audience in ('employee', 'coordinator', 'both')", name="audience_allowed"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
+    days_before: Mapped[int] = mapped_column(Integer, nullable=False)
+    channel: Mapped[str] = mapped_column(String(20), nullable=False, server_default=text("'email'"))
+    audience: Mapped[str] = mapped_column(String(20), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+
+
+class ReminderEvent(CreatedAtMixin, Base):
+    __tablename__ = "reminder_events"
+    __table_args__ = (
+        UniqueConstraint("employee_credential_id", "rule_id", "due_on", "recipient", name="dedupe"),
+        CheckConstraint("status in ('queued', 'sent', 'failed', 'skipped')", name="status_allowed"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
+    employee_credential_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("employee_credentials.id", ondelete="CASCADE")
+    )
+    rule_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("reminder_rules.id", ondelete="SET NULL")
+    )
+    employee_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("employees.id", ondelete="CASCADE")
+    )
+    due_on: Mapped[date] = mapped_column(Date, nullable=False)
+    channel: Mapped[str] = mapped_column(String(20), nullable=False)
+    recipient: Mapped[str] = mapped_column(String(320), nullable=False)
+    subject: Mapped[str] = mapped_column(String(200), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, server_default=text("'queued'"))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

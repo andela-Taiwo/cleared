@@ -200,7 +200,7 @@ async def _seed(session: AsyncSession) -> tuple[Organization, int]:
             session.add(JobRole(id=uuid7(), organization_id=organization.id, name=name, code=code))
     await session.flush()
 
-    roles = (await session.scalars(select(JobRole).order_by(JobRole.code))).all()
+    roles = list((await session.scalars(select(JobRole).order_by(JobRole.code))).all())
     if roles == []:
         raise RuntimeError("no job roles were created")
 
@@ -314,7 +314,7 @@ async def _seed_credentials(
                 expires_on = today + timedelta(days=70 + (index * 13 + spread) % 600)
                 verified = True
 
-            issued_on = expires_on - timedelta(days=365 if code != "TB" else 365)
+            issued_on = expires_on - timedelta(days=365)
             session.add(
                 EmployeeCredential(
                     id=uuid7(),
