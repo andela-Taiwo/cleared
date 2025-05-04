@@ -22,6 +22,7 @@ from cleared.schemas.employees import (
     ImportReport,
     ImportRowError,
 )
+from cleared.services import audit
 from cleared.services import compliance as compliance_service
 from cleared.services import employees as employees_service
 from cleared.services import imports as imports_service
@@ -96,6 +97,15 @@ async def create_employee(
             raise Problem(422, "Unknown job role") from None
         except IntegrityError:
             raise Problem(409, "That employee number is already in use") from None
+
+        audit.record_for(
+            session,
+            principal,
+            action="employee.created",
+            entity="employee",
+            entity_id=employee.id,
+            data={"name": f"{employee.first_name} {employee.last_name}"},
+        )
         employee = await _reload(session, employee.id)
         return EmployeeOut.model_validate(employee)
 
@@ -147,5 +157,13 @@ async def update_employee(
         except ValueError:
             raise Problem(422, "Unknown job role") from None
         await session.flush()
+        audit.record_for(
+            session,
+            principal,
+            action="employee.updated",
+            entity="employee",
+            entity_id=employee_id,
+            data={"fields": sorted(payload.model_dump(exclude_unset=True))},
+        )
         employee = await _reload(session, employee_id)
         return EmployeeOut.model_validate(employee)

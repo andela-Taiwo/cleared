@@ -16,6 +16,7 @@ from cleared.schemas.credentials import (
     EmployeeCredentialOut,
     EmployeeCredentialUpdate,
 )
+from cleared.services import audit
 from cleared.services import credentials as credentials_service
 from cleared.services.credentials import CredentialFilters
 
@@ -76,6 +77,18 @@ async def create_credential(
         )
         credential = await credentials_service.get_credential(session, credential.id)
         assert credential is not None
+        audit.record_for(
+            session,
+            principal,
+            action="credential.recorded",
+            entity="employee_credential",
+            entity_id=credential.id,
+            data={
+                "employee_id": str(employee_id),
+                "type": credential.credential_type.code,
+                "expires_on": credential.expires_on.isoformat() if credential.expires_on else None,
+            },
+        )
         return EmployeeCredentialOut.model_validate(credential)
 
 
@@ -110,6 +123,13 @@ async def verify_credential(
 
         await credentials_service.verify_credential(session, credential, principal.user_id)
         await session.flush()
+        audit.record_for(
+            session,
+            principal,
+            action="credential.verified",
+            entity="employee_credential",
+            entity_id=credential_id,
+        )
         credential = await credentials_service.get_credential(session, credential_id)
         assert credential is not None
         return EmployeeCredentialOut.model_validate(credential)
@@ -123,4 +143,11 @@ async def delete_credential(
         credential = await credentials_service.get_credential(session, credential_id)
         if credential is None:
             raise Problem(404, "Credential not found")
+        audit.record_for(
+            session,
+            principal,
+            action="credential.deleted",
+            entity="employee_credential",
+            entity_id=credential_id,
+        )
         await credentials_service.delete_credential(session, credential)

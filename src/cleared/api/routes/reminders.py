@@ -20,6 +20,7 @@ from cleared.schemas.reminders import (
     ReminderRuleUpdate,
     ReminderRunOut,
 )
+from cleared.services import audit
 from cleared.services import reminders as reminders_service
 
 router = APIRouter(tags=["reminders"])
@@ -57,6 +58,14 @@ async def create_rule(
         )
         session.add(rule)
         await session.flush()
+        audit.record_for(
+            session,
+            principal,
+            action="reminder_rule.created",
+            entity="reminder_rule",
+            entity_id=rule.id,
+            data={"days_before": rule.days_before, "audience": rule.audience},
+        )
         return ReminderRuleOut.model_validate(rule)
 
 
@@ -110,5 +119,12 @@ async def run_reminders(principal: AdminDep, session: SessionDep) -> ReminderRun
             session,
             organization_id=principal.organization_id,
             agency_name=organization.name if organization else "Your agency",
+        )
+        audit.record_for(
+            session,
+            principal,
+            action="reminders.run",
+            entity="reminder_event",
+            data={"generated": report.generated, "sent": report.sent},
         )
         return ReminderRunOut(generated=report.generated, sent=report.sent)

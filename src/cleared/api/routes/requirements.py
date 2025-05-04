@@ -13,6 +13,7 @@ from cleared.api.errors import Problem
 from cleared.db.tenant import tenant_scope
 from cleared.domain.models import CredentialType, JobRole, RoleRequirement
 from cleared.schemas.requirements import RequirementMatrix, RequirementOut, RequirementSet
+from cleared.services import audit
 
 router = APIRouter(prefix="/requirements", tags=["requirements"])
 
@@ -69,6 +70,14 @@ async def replace_role_requirements(
                 )
             )
         await session.flush()
+        audit.record_for(
+            session,
+            principal,
+            action="requirements.replaced",
+            entity="job_role",
+            entity_id=job_role_id,
+            data={"credential_type_ids": sorted(str(value) for value in wanted)},
+        )
 
         rows = (
             await session.scalars(

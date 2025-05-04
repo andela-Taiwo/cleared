@@ -5,7 +5,6 @@ from datetime import date, timedelta
 from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from tests.support.api import sign_in
 from tests.support.seed import Agency
 

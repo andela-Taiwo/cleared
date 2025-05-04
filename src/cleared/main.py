@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from cleared import __version__
 from cleared.api.errors import register_error_handlers
+from cleared.api.routes.audit import router as audit_router
 from cleared.api.routes.auth import router as auth_router
 from cleared.api.routes.compliance import router as compliance_router
 from cleared.api.routes.credential_types import router as credential_types_router
@@ -47,6 +48,7 @@ def create_app() -> FastAPI:
     app.include_router(credential_types_router, prefix="/v1")
     app.include_router(credentials_router, prefix="/v1")
     app.include_router(compliance_router, prefix="/v1")
+    app.include_router(audit_router, prefix="/v1")
     app.include_router(roles_router, prefix="/v1")
     app.include_router(requirements_router, prefix="/v1")
     app.include_router(reminders_router, prefix="/v1")

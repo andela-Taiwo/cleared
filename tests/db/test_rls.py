@@ -118,6 +118,7 @@ TENANT_TABLES = {
     "role_requirements",
     "reminder_rules",
     "reminder_events",
+    "audit_events",
 }
 
 
