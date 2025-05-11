@@ -19,6 +19,7 @@ from cleared.api.routes.credentials import router as credentials_router
 from cleared.api.routes.employees import router as employees_router
 from cleared.api.routes.job_roles import router as roles_router
 from cleared.api.routes.reminders import router as reminders_router
+from cleared.api.routes.reports import router as reports_router
 from cleared.api.routes.requirements import router as requirements_router
 from cleared.config import get_settings
 
@@ -52,6 +53,7 @@ def create_app() -> FastAPI:
     app.include_router(roles_router, prefix="/v1")
     app.include_router(requirements_router, prefix="/v1")
     app.include_router(reminders_router, prefix="/v1")
+    app.include_router(reports_router, prefix="/v1")
 
     @app.get("/healthz", tags=["meta"])
     async def healthz() -> dict[str, str]:
