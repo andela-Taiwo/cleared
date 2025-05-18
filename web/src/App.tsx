@@ -7,6 +7,7 @@ import DashboardPage from "@/routes/DashboardPage";
 import EmployeePage from "@/routes/EmployeePage";
 import EmployeesPage from "@/routes/EmployeesPage";
 import LoginPage from "@/routes/LoginPage";
+import RemindersPage from "@/routes/RemindersPage";
 import RequirementsPage from "@/routes/RequirementsPage";
 
 function Boot() {
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/employees" element={<EmployeesPage />} />
         <Route path="/employees/:id" element={<EmployeePage />} />
         <Route path="/requirements" element={<RequirementsPage />} />
+        <Route path="/reminders" element={<RemindersPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

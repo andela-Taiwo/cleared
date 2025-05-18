@@ -6,6 +6,7 @@ const nav = [
   { to: "/", label: "Overview", end: true },
   { to: "/employees", label: "Roster", end: false },
   { to: "/requirements", label: "Requirements", end: false },
+  { to: "/reminders", label: "Reminders", end: false },
 ];
 
 function initials(name: string): string {
