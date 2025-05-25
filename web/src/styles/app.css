@@ -1234,3 +1234,44 @@ a:hover {
 .switch input:checked + .switch__track::after {
   transform: translateX(14px);
 }
+
+/* Print ------------------------------------------------------------------ */
+.report__footnote {
+  margin-top: 14px;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+@media print {
+  .sidebar,
+  .no-print,
+  .page-header .row {
+    display: none !important;
+  }
+
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .page {
+    padding: 0;
+    max-width: none;
+  }
+
+  .card {
+    border: 1px solid #ddd;
+    box-shadow: none;
+  }
+
+  .table th {
+    background: #fff;
+  }
+
+  .badge {
+    border: 1px solid #ccc;
+  }
+}

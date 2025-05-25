@@ -3,12 +3,15 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { useMe } from "@/auth/auth";
 import AppShell from "@/components/AppShell";
+import AuditPage from "@/routes/AuditPage";
 import DashboardPage from "@/routes/DashboardPage";
 import EmployeePage from "@/routes/EmployeePage";
 import EmployeesPage from "@/routes/EmployeesPage";
 import LoginPage from "@/routes/LoginPage";
 import RemindersPage from "@/routes/RemindersPage";
+import ReportsPage from "@/routes/ReportsPage";
 import RequirementsPage from "@/routes/RequirementsPage";
+import SettingsPage from "@/routes/SettingsPage";
 
 function Boot() {
   return <div className="boot">Loading…</div>;
@@ -44,6 +47,9 @@ export default function App() {
         <Route path="/employees/:id" element={<EmployeePage />} />
         <Route path="/requirements" element={<RequirementsPage />} />
         <Route path="/reminders" element={<RemindersPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/audit" element={<AuditPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
