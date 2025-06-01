@@ -67,6 +67,32 @@ jobs:
       - name: Test
         run: uv run pytest -q
 
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Lint and types
+        run: |
+          npx biome check src
+          npx tsc --noEmit
+      - name: Test
+        run: npx vitest run
+      - name: Build
+        run: npx vite build
+
   secrets:
     name: secrets
     runs-on: ubuntu-latest
