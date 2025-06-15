@@ -147,6 +147,7 @@ export default function EmployeesPage() {
                 <tr>
                   <th>Employee</th>
                   <th>Role</th>
+                  <th>Compliance</th>
                   <th>Status</th>
                   <th>Hired</th>
                   <th>Contact</th>
@@ -164,6 +165,32 @@ export default function EmployeesPage() {
                       ) : null}
                     </td>
                     <td>{employee.job_role?.name ?? <span className="faint">—</span>}</td>
+                    <td>
+                      {employee.compliance ? (
+                        <span className="row">
+                          <Badge
+                            tone={
+                              employee.compliance.state === "compliant"
+                                ? "ok"
+                                : employee.compliance.state === "at_risk"
+                                  ? "warn"
+                                  : "danger"
+                            }
+                          >
+                            {employee.compliance.state === "compliant"
+                              ? "Ready"
+                              : employee.compliance.state === "at_risk"
+                                ? "At risk"
+                                : "Blocked"}
+                          </Badge>
+                          <span className="faint small numeric">
+                            {employee.compliance.readiness}%
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="faint">—</span>
+                      )}
+                    </td>
                     <td>
                       <Badge tone={statusTone(employee.status)}>{employee.status}</Badge>
                     </td>
