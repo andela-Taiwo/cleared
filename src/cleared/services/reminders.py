@@ -27,6 +27,7 @@ from cleared.domain.models import (
 )
 from cleared.domain.reminders import ExpiringCredential, Rule, messages_for
 from cleared.mail import Outgoing, Transport, get_transport
+from cleared.services import compliance as compliance_service
 
 logger = logging.getLogger("cleared.reminders")
 
@@ -177,7 +178,7 @@ async def run(
     generated = await queue_due(
         session,
         organization_id=organization_id,
-        today=today or date.today(),
+        today=today or await compliance_service.agency_today(session),
         agency_name=agency_name,
     )
     sent = await deliver(session)

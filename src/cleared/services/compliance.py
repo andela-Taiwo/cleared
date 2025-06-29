@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,14 @@ from cleared.domain.compliance import (
     Requirement,
     evaluate_employee,
 )
-from cleared.domain.models import CredentialType, Employee, EmployeeCredential, RoleRequirement
+from cleared.domain.models import (
+    CredentialType,
+    Employee,
+    EmployeeCredential,
+    Organization,
+    RoleRequirement,
+)
+from cleared.domain.timezones import today_in
 
 
 @dataclass(frozen=True)
@@ -47,7 +54,15 @@ class Rules:
         )
 
 
-async def load_rules(session: AsyncSession, *, today: date | None = None) -> Rules:
+async def agency_today(session: AsyncSession, *, now: datetime | None = None) -> date:
+    """The date it is where the agency is, not where the server is."""
+    timezone = await session.scalar(select(Organization.timezone))
+    return today_in(timezone or "UTC", now=now)
+
+
+async def load_rules(
+    session: AsyncSession, *, today: date | None = None, now: datetime | None = None
+) -> Rules:
     requirement_rows = (
         await session.execute(
             select(
@@ -88,9 +103,7 @@ async def load_rules(session: AsyncSession, *, today: date | None = None) -> Rul
     return Rules(
         requirements_by_role=requirements_by_role,
         credentials_by_employee=credentials_by_employee,
-        # The agency's "today" is not UTC's. Until this is fixed, a credential that expires
-        # today can already read as expired for an agency on the west coast.
-        today=today or date.today(),
+        today=today or await agency_today(session, now=now),
     )
 
 
