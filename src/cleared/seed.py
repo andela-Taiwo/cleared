@@ -12,6 +12,7 @@ import random
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import select
+from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from uuid6 import uuid7
 
@@ -23,10 +24,13 @@ from cleared.domain.models import (
     EmployeeCredential,
     JobRole,
     Organization,
+    ReminderEvent,
+    ReminderRule,
     RoleRequirement,
     User,
 )
 from cleared.security.passwords import hash_password
+from cleared.services import reminders
 
 SLUG = "northwind"
 DEMO_PASSWORD = "demo1234!"
@@ -149,6 +153,8 @@ ROLE_REQUIREMENTS = {
     "HHA": ["HHA-CERT", "CPR", "TB"],
     "PT": ["PT-LIC", "CPR", "CORI"],
 }
+
+DEFAULT_RULES = [60, 30, 14, 7, 1]
 
 ROLES = [
     ("Certified Nursing Assistant", "CNA"),
@@ -332,6 +338,44 @@ async def _seed_credentials(
     await session.flush()
 
 
+async def _seed_reminders(session: AsyncSession, organization: Organization) -> None:
+    """Default rules, plus 40 days of outbox history so the screen is not empty."""
+    existing = await session.scalar(select(ReminderRule).limit(1))
+    if existing is None:
+        for days in DEFAULT_RULES:
+            session.add(
+                ReminderRule(
+                    id=uuid7(),
+                    organization_id=organization.id,
+                    days_before=days,
+                    audience="both",
+                    channel="email",
+                )
+            )
+        await session.flush()
+
+    sent = await session.scalar(select(ReminderEvent).limit(1))
+    if sent is not None:
+        return
+
+    today = date.today()
+    for offset in range(40, -1, -1):
+        await reminders.queue_due(
+            session,
+            organization_id=organization.id,
+            today=today - timedelta(days=offset),
+            agency_name=organization.name,
+        )
+
+    # The history is written, not sent: mark it as delivered at 09:00 on the day it was due.
+    await session.execute(
+        sql_text(
+            "update reminder_events set status = 'sent', "
+            "sent_at = (due_on + time '09:00') at time zone 'UTC' where status = 'queued'"
+        )
+    )
+
+
 async def main() -> None:
     settings = get_settings()
     engine = create_async_engine(
@@ -342,6 +386,7 @@ async def main() -> None:
     try:
         async with factory() as session, session.begin():
             organization, count = await _seed(session)
+            await _seed_reminders(session, organization)
     finally:
         await engine.dispose()
 
