@@ -43,6 +43,10 @@ class Message:
     due_on: date
 
 
+def _plural(count: int, word: str) -> str:
+    return f"{count} {word}" if count == 1 else f"{count} {word}s"
+
+
 def days_left(credential: ExpiringCredential, today: date) -> int:
     return (credential.expires_on - today).days
 
@@ -58,7 +62,7 @@ def _employee_message(
     body = (
         f"Hi {credential.employee_name.split(' ')[0]},\n\n"
         f"Our records show your {credential.credential_name} expires on "
-        f"{credential.expires_on:%d %B %Y} — in {remaining} days.\n\n"
+        f"{credential.expires_on:%d %B %Y} — in {_plural(remaining, 'day')}.\n\n"
         "Please send a copy of the renewed document to your coordinator before then. "
         "If it has already been renewed, reply with the new expiry date and we will update "
         "your file.\n\n"

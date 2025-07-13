@@ -55,7 +55,7 @@ export default function RemindersPage() {
         </p>
       ) : null}
 
-      <div className="detail-grid">
+      <div className="stack">
         <Card>
           <div className="card__header">
             <h2 className="subtitle">Rules</h2>
@@ -98,6 +98,7 @@ export default function RemindersPage() {
                     <th>Sent</th>
                     <th>To</th>
                     <th>Subject</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -105,13 +106,11 @@ export default function RemindersPage() {
                     <tr key={event.id}>
                       <td className="numeric muted">{formatDate(event.sent_at ?? event.due_on)}</td>
                       <td className="small">{event.recipient}</td>
+                      <td>{event.subject}</td>
                       <td>
-                        <div>{event.subject}</div>
-                        <div className="faint small">
-                          <Badge tone={event.status === "sent" ? "ok" : "neutral"}>
-                            {event.status}
-                          </Badge>
-                        </div>
+                        <Badge tone={event.status === "sent" ? "ok" : "neutral"}>
+                          {event.status}
+                        </Badge>
                       </td>
                     </tr>
                   ))}
