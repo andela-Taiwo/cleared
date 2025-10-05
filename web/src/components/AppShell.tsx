@@ -33,6 +33,9 @@ export default function AppShell() {
 
   return (
     <div className="shell">
+      <a className="skip-link" href="#content">
+        Skip to content
+      </a>
       <aside className="sidebar">
         <div className="sidebar__brand">
           <span className="brand__mark" aria-hidden="true">
@@ -71,7 +74,7 @@ export default function AppShell() {
         </div>
       </aside>
 
-      <div className="shell__content">
+      <div className="shell__content" id="content">
         <Outlet />
       </div>
     </div>
