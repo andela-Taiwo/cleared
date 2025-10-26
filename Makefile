@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-.PHONY: help install db-up db-down migrate revision seed dev web check clean
+.PHONY: help install db-up db-down migrate revision seed dev web check reset-db clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -31,6 +31,11 @@ dev: ## Run the API with reload on :8000
 
 web: ## Run the web app on :5173
 	cd web && npm run dev
+
+reset-db: ## Drop the development database and rebuild it with the demo data
+	uv run alembic downgrade base
+	uv run alembic upgrade head
+	uv run python -m cleared.seed
 
 check: ## Run everything CI runs
 	uv run ruff check .
