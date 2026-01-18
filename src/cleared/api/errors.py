@@ -13,6 +13,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from cleared.config import get_settings
+
 
 class Problem(Exception):
     def __init__(
@@ -61,7 +63,7 @@ def _response(
 
 
 async def problem_handler(request: Request, exc: Problem) -> JSONResponse:
-    return _response(
+    response = _response(
         request,
         status=exc.status_code,
         title=exc.title,
@@ -69,6 +71,10 @@ async def problem_handler(request: Request, exc: Problem) -> JSONResponse:
         type_=exc.type,
         headers=exc.headers,
     )
+    if exc.status_code == 401:
+        # A session that no longer exists should not be sent again on every request.
+        response.delete_cookie(get_settings().session_cookie_name, path="/")
+    return response
 
 
 async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:

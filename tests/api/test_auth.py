@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from httpx import AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from tests.support.api import sign_in
 from tests.support.seed import Agency
@@ -104,3 +105,17 @@ async def test_invalid_email_is_a_problem_document(client: AsyncClient) -> None:
     assert response.status_code == 422
     assert response.headers["content-type"] == "application/problem+json"
     assert response.json()["title"] == "Request validation failed"
+
+
+async def test_a_stale_cookie_is_cleared(
+    client: AsyncClient, agency: Agency, owner_session: AsyncSession
+) -> None:
+    await sign_in(client, agency)
+    await owner_session.execute(text("delete from sessions"))
+    await owner_session.commit()
+
+    response = await client.get("/v1/auth/me")
+
+    assert response.status_code == 401
+    assert "cleared_session=" in response.headers["set-cookie"]
+    assert "Max-Age=0" in response.headers["set-cookie"]
