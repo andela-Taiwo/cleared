@@ -15,6 +15,7 @@ export default function EmployeesPage() {
   const [search, setSearch] = useState("");
   const [roleId, setRoleId] = useState("");
   const [status, setStatus] = useState("");
+  const [compliance, setCompliance] = useState("");
   const [adding, setAdding] = useState(false);
 
   const deferredSearch = useDeferredValue(search);
@@ -22,6 +23,7 @@ export default function EmployeesPage() {
     search: deferredSearch,
     roleId,
     status,
+    compliance,
     limit: 50,
   });
   const roles = useRoles();
@@ -123,6 +125,18 @@ export default function EmployeesPage() {
             <option value="active">Active</option>
             <option value="onboarding">Onboarding</option>
             <option value="inactive">Inactive</option>
+          </select>
+
+          <select
+            className="select"
+            value={compliance}
+            onChange={(event) => setCompliance(event.target.value)}
+            aria-label="Filter by compliance"
+          >
+            <option value="">Anyone</option>
+            <option value="compliant">Ready to deploy</option>
+            <option value="at_risk">At risk</option>
+            <option value="non_compliant">Blocked</option>
           </select>
         </div>
 

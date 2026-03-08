@@ -112,3 +112,22 @@ async def test_the_roster_carries_a_compliance_summary(client: AsyncClient, agen
 
     assert roster["items"][0]["compliance"]["state"] == "non_compliant"
     assert roster["items"][0]["compliance"]["missing"] == 2
+
+
+async def test_the_roster_can_be_filtered_to_blocked_people(
+    client: AsyncClient, agency: Agency
+) -> None:
+    await sign_in(client, agency)
+    await setup_agency(client)
+    role = (await client.get("/v1/roles")).json()[0]
+    await client.post(
+        "/v1/employees",
+        json={"first_name": "Ready", "last_name": "Person", "job_role_id": role["id"]},
+    )
+
+    blocked = await client.get("/v1/employees", params={"compliance": "non_compliant"})
+    compliant = await client.get("/v1/employees", params={"compliance": "compliant"})
+
+    assert [row["last_name"] for row in blocked.json()["items"]] == ["Person", "Vega"]
+    assert blocked.json()["total"] == 2
+    assert compliant.json()["total"] == 0

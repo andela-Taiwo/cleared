@@ -44,6 +44,7 @@ type Filters = {
   search?: string;
   roleId?: string;
   status?: string;
+  compliance?: string;
   cursor?: string | null;
   limit?: number;
 };
@@ -53,6 +54,7 @@ function queryString(filters: Filters): string {
   if (filters.search) params.set("search", filters.search);
   if (filters.roleId) params.set("role_id", filters.roleId);
   if (filters.status) params.set("status", filters.status);
+  if (filters.compliance) params.set("compliance", filters.compliance);
   if (filters.cursor) params.set("cursor", filters.cursor);
   if (filters.limit) params.set("limit", String(filters.limit));
   const value = params.toString();

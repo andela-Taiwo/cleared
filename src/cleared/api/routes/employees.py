@@ -6,6 +6,7 @@ import uuid
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, UploadFile
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from cleared.api.deps import EditorDep, PrincipalDep, SessionDep
@@ -59,20 +60,42 @@ async def list_employees(
     search: Annotated[str | None, Query(max_length=120)] = None,
     role_id: uuid.UUID | None = None,
     status: Literal["active", "inactive", "onboarding"] | None = None,
+    compliance: Literal["compliant", "at_risk", "non_compliant"] | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 25,
     cursor: str | None = None,
 ) -> EmployeePage:
     filters = EmployeeFilters(
-        search=search, job_role_id=role_id, status=status, limit=limit, cursor=cursor
+        search=search,
+        job_role_id=role_id,
+        status=status,
+        compliance=compliance,
+        limit=limit,
+        cursor=cursor,
     )
 
     async with tenant_scope(session, principal.organization_id):
+        rules = await compliance_service.load_rules(session)
+
+        # Filtering on a computed state cannot happen in SQL, so the matching ids are worked out
+        # first. Agency rosters are small; if one ever is not, this becomes a materialised view.
+        matching_ids: list[uuid.UUID] | None = None
+        if filters.compliance:
+            everyone = (await session.scalars(select(Employee))).all()
+            matching_ids = [
+                employee.id
+                for employee in everyone
+                if rules.for_employee(employee).state.value == filters.compliance
+            ]
+            if not matching_ids:
+                return EmployeePage(items=[], next_cursor=None, total=0)
+
         try:
-            page, next_cursor, total = await employees_service.list_employees(session, filters)
+            page, next_cursor, total = await employees_service.list_employees(
+                session, filters, matching_ids=matching_ids
+            )
         except ValueError:
             raise Problem(400, "Invalid cursor") from None
 
-        rules = await compliance_service.load_rules(session)
         items = [
             EmployeeOut.model_validate(employee).model_copy(
                 update={"compliance": _summary(rules.for_employee(employee))}

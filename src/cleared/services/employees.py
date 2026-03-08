@@ -25,6 +25,7 @@ MAX_PAGE_SIZE = 100
 @dataclass(frozen=True)
 class EmployeeFilters:
     search: str | None = None
+    compliance: str | None = None
     job_role_id: uuid.UUID | None = None
     status: str | None = None
     limit: int = 25
@@ -71,7 +72,10 @@ def _after_cursor(stmt: Select[Any], cursor: str) -> Select[Any]:
 
 
 async def list_employees(
-    session: AsyncSession, filters: EmployeeFilters
+    session: AsyncSession,
+    filters: EmployeeFilters,
+    *,
+    matching_ids: list[uuid.UUID] | None = None,
 ) -> tuple[list[Employee], str | None, int]:
     limit = min(filters.limit, MAX_PAGE_SIZE)
 
@@ -81,6 +85,8 @@ async def list_employees(
     count_statement = select(func.count()).select_from(Employee)
 
     conditions = _conditions(filters)
+    if matching_ids is not None:
+        conditions.append(Employee.id.in_(matching_ids))
     if conditions:
         statement = statement.where(*conditions)
         count_statement = count_statement.where(*conditions)
