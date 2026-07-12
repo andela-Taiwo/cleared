@@ -241,6 +241,7 @@ async def _seed(session: AsyncSession) -> tuple[Organization, int]:
         )
 
     await session.flush()
+    await _seed_credentials(session, organization, roles)
     return organization, 40
 
 
