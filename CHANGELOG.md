@@ -4,6 +4,30 @@ All notable changes are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-09-20
+
+### Added
+- Filter the roster by compliance state: "show me everyone who cannot work today".
+
+### Changed
+- Indexes for the three queries the screens actually run: the outbox, the audit page and an
+  employee's credentials.
+
+## [1.1.1] — 2026-07-12
+
+### Fixed
+- The seed now creates the credential catalogue and the requirement matrix on a fresh database,
+  so a new clone shows a meaningful demo instead of forty empty files.
+
+## [1.1.0] — 2026-01-18
+
+### Fixed
+- A session the server no longer recognises is cleared from the browser instead of being resent
+  on every request.
+
+### Added
+- Postmortem for the June 2025 expiry bug, in `docs/postmortems/`.
+
 ## [1.0.0] — 2025-11-09
 
 First version that a real agency could run for a week.
