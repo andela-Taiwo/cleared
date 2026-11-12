@@ -122,10 +122,19 @@ migrations/     Alembic
 
 Working end to end, deployed to nobody. The honest list of what is not here yet:
 
-- Email delivery is a log transport; the outbox and its interface are real.
-- Document upload is modelled but not wired to the credential form.
-- No MFA, no SSO, no rate limiting on login.
-- One agency per deployment is not enforced; RLS makes multi-agency safe, but signup is manual.
+- Email delivery is a log transport. The outbox, the rules and the delivery record are real; the
+  provider is one class away.
+- Documents are referenced, not stored: no upload, no object storage, no virus scan.
+- No MFA, no SSO, and no rate limiting on the login endpoint.
+- Signup is manual — an operator creates the agency and its first admin.
+- The layout stacks below 900px but is designed for a desk.
+
+## Next
+
+- Upload the document behind each credential (signed URLs, S3-compatible, one tenant prefix).
+- Per-location timezones, so an agency operating across two states gets both calendars right.
+- A real email provider, with bounce and complaint handling feeding back into the outbox.
+- Audit log export, because the first thing a surveyor asks for is the paper trail.
 
 ## Licence
 
